@@ -29,13 +29,13 @@ python trees.py <command> [options]
 
 The numeric columns available to `--field` are: `Girth`, `Age`, `Height`, `Value`.
 
-### `show` — print records by id
+### `show` - print records by id
 
 ```bash
 python trees.py show 1 3 42
 ```
 
-### `sample` — random sample + statistics
+### `sample` - random sample + statistics
 
 Pulls a random sample (default 20) and summarises the chosen field for both the
 sample and the whole population.
@@ -47,7 +47,7 @@ python trees.py sample --seed 7           # reproducible sample
 python trees.py sample --replace          # allow duplicates
 ```
 
-### `stats` — population statistics
+### `stats` - population statistics
 
 ```bash
 python trees.py stats                     # every numeric column
@@ -55,7 +55,7 @@ python trees.py stats --by-type           # Girth broken down by species
 python trees.py stats --by-type --field Value
 ```
 
-### `filter` — list trees matching criteria
+### `filter` - list trees matching criteria
 
 ```bash
 python trees.py filter --type Oak --min-girth 3.0
@@ -68,4 +68,4 @@ Filter options: `--type`, `--min-girth`, `--max-girth`, `--min-age`,
 
 ## Requirements
 
-Python 3.8+ — no third-party packages.
+Python 3.8+ - no third-party packages.
