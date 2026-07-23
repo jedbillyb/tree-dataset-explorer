@@ -77,6 +77,23 @@ def print_summary(label, values):
     print(f"    stdev  = {s['stdev']:.3f}")
 
 
+def type_counts(trees):
+    """Return {type: count} for the given trees, ordered by descending count."""
+    counts = {}
+    for rec in trees.values():
+        counts[rec["Type"]] = counts.get(rec["Type"], 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+def print_type_breakdown(label, trees):
+    """Print each type's count and share of the population as a percentage."""
+    counts = type_counts(trees)
+    total = sum(counts.values())
+    print(f"{label} (n = {total}):")
+    for typ, c in counts.items():
+        print(f"    {typ:<8} {c:>4}  {c / total * 100:6.2f}%")
+
+
 HEADER = f"{'Tree':>5}  {'Type':<6} {'Girth':>6} {'Age':>4} {'Dis':>3} {'Height':>7} {'Value':>7}"
 
 
@@ -102,6 +119,22 @@ def cmd_show(trees, a):
         print_table(trees, ids)
 
 
+def allocate(n, counts):
+    """Split ``n`` across the keys of ``counts`` in proportion to their sizes.
+
+    Uses largest-remainder rounding so the parts always sum back to ``n``.
+    """
+    total = sum(counts.values())
+    exact = {k: n * c / total for k, c in counts.items()}
+    alloc = {k: int(v) for k, v in exact.items()}
+    remainder = n - sum(alloc.values())
+    # Hand out the leftover seats to the largest fractional parts.
+    order = sorted(exact, key=lambda k: exact[k] - alloc[k], reverse=True)
+    for k in order[:remainder]:
+        alloc[k] += 1
+    return alloc
+
+
 def cmd_sample(trees, a):
     if a.seed is not None:
         random.seed(a.seed)
@@ -109,13 +142,32 @@ def cmd_sample(trees, a):
     if a.n > len(pop) and not a.replace:
         raise SystemExit(f"cannot sample {a.n} without replacement from {len(pop)} trees")
 
-    if a.replace:
+    if a.stratified:
+        # Keep each type's share of the sample equal to its share of the population.
+        by_type = {}
+        for t, rec in trees.items():
+            by_type.setdefault(rec["Type"], []).append(t)
+        alloc = allocate(a.n, {typ: len(ids) for typ, ids in by_type.items()})
+        sample = []
+        for typ, k in alloc.items():
+            ids = by_type[typ]
+            if a.replace:
+                sample += [random.choice(ids) for _ in range(k)]
+            else:
+                if k > len(ids):
+                    raise SystemExit(
+                        f"cannot draw {k} {typ} without replacement from {len(ids)}"
+                    )
+                sample += random.sample(ids, k)
+        sample = sorted(sample)
+    elif a.replace:
         sample = [random.choice(pop) for _ in range(a.n)]
     else:
         sample = sorted(random.sample(pop, a.n))
 
     mode = "with" if a.replace else "without"
-    print(f"Random sample of {a.n} trees ({mode} replacement):")
+    kind = "stratified " if a.stratified else ""
+    print(f"Random {kind}sample of {a.n} trees ({mode} replacement):")
     print(sample)
     print()
     print_table(trees, sample)
@@ -123,10 +175,16 @@ def cmd_sample(trees, a):
     print_summary(f"{a.field} (sample)", [trees[t][a.field] for t in sample])
     print()
     print_summary(f"{a.field} (population)", [rec[a.field] for rec in trees.values()])
+    print()
+    print_type_breakdown("Type mix (sample)", {t: trees[t] for t in sample})
+    print()
+    print_type_breakdown("Type mix (population)", trees)
 
 
 def cmd_stats(trees, a):
     if a.by_type:
+        print_type_breakdown("Type mix", trees)
+        print()
         types = sorted({rec["Type"] for rec in trees.values()})
         for typ in types:
             vals = [rec[a.field] for rec in trees.values() if rec["Type"] == typ]
@@ -174,6 +232,8 @@ def main():
     s = sub.add_parser("sample", help="random sample + stats")
     s.add_argument("-n", type=int, default=20, help="sample size (default 20)")
     s.add_argument("--replace", action="store_true", help="sample with replacement")
+    s.add_argument("--stratified", action="store_true",
+                   help="keep each type's share equal to its population share")
     s.add_argument("--seed", type=int, help="RNG seed for reproducibility")
     s.add_argument("--field", choices=NUMERIC, default="Girth", help="field to summarise")
     s.set_defaults(func=cmd_sample)
