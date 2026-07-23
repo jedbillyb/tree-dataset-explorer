@@ -119,10 +119,14 @@ def cmd_show(trees, a):
         print_table(trees, ids)
 
 
-def allocate(n, counts):
+def allocate(n, counts, min_each=0):
     """Split ``n`` across the keys of ``counts`` in proportion to their sizes.
 
-    Uses largest-remainder rounding so the parts always sum back to ``n``.
+    Uses largest-remainder rounding so the parts start out summing to ``n``.
+    With ``min_each`` any key that would round down below that (e.g. a rare
+    type rounding away to zero) is bumped up to the minimum instead. Those
+    bumps are added on top, so the returned parts can total slightly more than
+    ``n`` -- the trade-off for guaranteeing every type is represented.
     """
     total = sum(counts.values())
     exact = {k: n * c / total for k, c in counts.items()}
@@ -132,6 +136,10 @@ def allocate(n, counts):
     order = sorted(exact, key=lambda k: exact[k] - alloc[k], reverse=True)
     for k in order[:remainder]:
         alloc[k] += 1
+    # Round up any type that still falls short of the minimum.
+    for k in alloc:
+        if alloc[k] < min_each:
+            alloc[k] = min_each
     return alloc
 
 
@@ -147,7 +155,7 @@ def cmd_sample(trees, a):
         by_type = {}
         for t, rec in trees.items():
             by_type.setdefault(rec["Type"], []).append(t)
-        alloc = allocate(a.n, {typ: len(ids) for typ, ids in by_type.items()})
+        alloc = allocate(a.n, {typ: len(ids) for typ, ids in by_type.items()}, min_each=1)
         sample = []
         for typ, k in alloc.items():
             ids = by_type[typ]
@@ -167,7 +175,9 @@ def cmd_sample(trees, a):
 
     mode = "with" if a.replace else "without"
     kind = "stratified " if a.stratified else ""
-    print(f"Random {kind}sample of {a.n} trees ({mode} replacement):")
+    # Stratified rounding-up can push the total a little above the requested n.
+    note = f" (rounded up from {a.n})" if len(sample) != a.n else ""
+    print(f"Random {kind}sample of {len(sample)} trees{note} ({mode} replacement):")
     print(sample)
     print()
     print_table(trees, sample)
