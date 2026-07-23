@@ -22,6 +22,7 @@ Examples
 
 import argparse
 import csv
+import math
 import random
 import statistics
 from pathlib import Path
@@ -119,28 +120,16 @@ def cmd_show(trees, a):
         print_table(trees, ids)
 
 
-def allocate(n, counts, min_each=0):
+def allocate(n, counts):
     """Split ``n`` across the keys of ``counts`` in proportion to their sizes.
 
-    Uses largest-remainder rounding so the parts start out summing to ``n``.
-    With ``min_each`` any key that would round down below that (e.g. a rare
-    type rounding away to zero) is bumped up to the minimum instead. Those
-    bumps are added on top, so the returned parts can total slightly more than
-    ``n`` -- the trade-off for guaranteeing every type is represented.
+    Each type's proportional share is rounded *up* (ceil), so every type that
+    exists is guaranteed at least one seat and no type is ever undercounted.
+    Because rounding up adds fractions on top, the returned parts total a
+    little more than ``n`` -- the trade-off for never rounding a type down.
     """
     total = sum(counts.values())
-    exact = {k: n * c / total for k, c in counts.items()}
-    alloc = {k: int(v) for k, v in exact.items()}
-    remainder = n - sum(alloc.values())
-    # Hand out the leftover seats to the largest fractional parts.
-    order = sorted(exact, key=lambda k: exact[k] - alloc[k], reverse=True)
-    for k in order[:remainder]:
-        alloc[k] += 1
-    # Round up any type that still falls short of the minimum.
-    for k in alloc:
-        if alloc[k] < min_each:
-            alloc[k] = min_each
-    return alloc
+    return {k: math.ceil(n * c / total) for k, c in counts.items()}
 
 
 def cmd_sample(trees, a):
@@ -155,7 +144,7 @@ def cmd_sample(trees, a):
         by_type = {}
         for t, rec in trees.items():
             by_type.setdefault(rec["Type"], []).append(t)
-        alloc = allocate(a.n, {typ: len(ids) for typ, ids in by_type.items()}, min_each=1)
+        alloc = allocate(a.n, {typ: len(ids) for typ, ids in by_type.items()})
         sample = []
         for typ, k in alloc.items():
             ids = by_type[typ]

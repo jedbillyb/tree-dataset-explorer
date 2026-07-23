@@ -47,7 +47,7 @@ python trees.py sample -n 40 --stratified # keep each species' population share
 
 You normally get exactly `-n` results. Without `--replace` they are all distinct trees; with `--replace` picks can repeat (so you may get fewer unique trees, and can request more than the 200 in the dataset). `--stratified` is the one exception (see below).
 
-**`--stratified`** draws the sample so each species' share matches its share of the whole population, allocating the sample size across types in proportion to their size (largest-remainder rounding). Every species that exists in the data is guaranteed at least one tree: a rare type whose proportional share would round to zero (e.g. Yew at 2.5%, only ~0.5 of a 20-tree sample) is rounded up to 1 instead. That seat is added on top, so the actual sample can be slightly larger than the requested `-n` -- the output says so, e.g. "sample of 21 trees (rounded up from 20)". Use a larger `n` if you want the percentages to line up more tightly.
+**`--stratified`** draws the sample so each species' share matches its share of the whole population. Each type's proportional share is rounded *up* (ceil), so no type is ever undercounted and every species that exists is guaranteed at least one tree (e.g. Yew at 2.5%, ~0.5 of a 20-tree sample, rounds up to 1). Because rounding up adds fractions on top, the actual sample is a little larger than the requested `-n` -- the output says so, e.g. "sample of 23 trees (rounded up from 20)". Use a larger `n` if you want the percentages to line up more tightly.
 
 ### `stats` - population statistics
 
