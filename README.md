@@ -29,8 +29,11 @@ The numeric columns available to `--field` are: `Girth`, `Age`, `Height`, `Value
 
 ### `show` - print records by id
 
+Prints the record for each id, then summarises a field (median, mean, min, max, stdev) across just those trees.
+
 ```
-python trees.py show 1 3 42
+python trees.py show 1 3 42                # Girth summary of these trees
+python trees.py show 6 21 25 --field Age   # median/mean Age of these trees
 ```
 
 ### `sample` - random sample + statistics

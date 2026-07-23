@@ -118,6 +118,8 @@ def cmd_show(trees, a):
     ids = [t for t in a.ids if t in trees]
     if ids:
         print_table(trees, ids)
+        print()
+        print_summary(f"{a.field} (these {len(ids)} trees)", [trees[t][a.field] for t in ids])
 
 
 def allocate(n, counts):
@@ -226,6 +228,8 @@ def main():
 
     s = sub.add_parser("show", help="print records for tree ids")
     s.add_argument("ids", type=int, nargs="+")
+    s.add_argument("--field", choices=NUMERIC, default="Girth",
+                   help="field to summarise (median, mean, ...) for these ids")
     s.set_defaults(func=cmd_show)
 
     s = sub.add_parser("sample", help="random sample + stats")
